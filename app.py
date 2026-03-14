@@ -84,7 +84,10 @@ def upload_to_gemini(client, file_bytes: bytes, filename: str):
 
 
 def speak(text: str):
-    """Read text aloud using macOS built-in TTS (non-blocking)."""
+    """Read text aloud using macOS built-in TTS (non-blocking). No-op on non-macOS."""
+    import platform
+    if platform.system() != "Darwin":
+        return
     clean = re.sub(r"\*+|_+|#{1,6}\s*|`+|\[|\]", "", text)
     subprocess.Popen(["say", "-v", "Samantha", "-r", "175", clean])
 
