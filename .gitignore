@@ -1,0 +1,12 @@
+# Case studies and transcripts (keep private)
+*.pdf
+*.docx
+*.doc
+*.pptx
+*.txt
+!requirements.txt
+
+# Python
+__pycache__/
+*.pyc
+.env
