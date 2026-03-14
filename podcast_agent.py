@@ -20,7 +20,8 @@ from google import genai
 from google.genai import types
 from pathlib import Path
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", ""))
+_api_key = os.environ.get("GEMINI_API_KEY", "")
+client = genai.Client(api_key=_api_key) if _api_key else None
 
 MODEL = "gemini-2.5-flash"
 
