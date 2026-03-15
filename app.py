@@ -12,6 +12,7 @@ import streamlit as st
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
+from streamlit_local_storage import LocalStorage
 
 st.set_page_config(page_title="Study Agent", page_icon="📚", layout="wide")
 
@@ -100,6 +101,21 @@ def init_session():
             st.session_state[k] = v
 
 init_session()
+
+_ls = LocalStorage()
+
+# Restore subjects (names + URLs) from localStorage on page load
+if not st.session_state.get("_storage_loaded"):
+    _saved = _ls.getItem("study_agent_subjects")
+    if _saved and isinstance(_saved, dict):
+        for name, data in _saved.items():
+            if name not in st.session_state.subjects:
+                st.session_state.subjects[name] = {"files": [], "urls": data.get("urls", [])}
+        _saved_active = _ls.getItem("study_agent_active")
+        if _saved_active and _saved_active in st.session_state.subjects:
+            st.session_state.active_subject = _saved_active
+        st.session_state._storage_loaded = True
+        st.rerun()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -514,3 +530,10 @@ with qa_tab:
             st.session_state[f"{qa_key}_messages"].append({"role": "assistant", "content": response_text})
             if speak_aloud:
                 speak(response_text)
+
+# ── Persist subject names + URLs to localStorage ──────────────────────────────
+_ls.setItem("study_agent_subjects", {
+    name: {"urls": data["urls"]}
+    for name, data in st.session_state.subjects.items()
+})
+_ls.setItem("study_agent_active", st.session_state.active_subject or "")
