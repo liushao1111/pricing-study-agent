@@ -224,13 +224,14 @@ with st.sidebar:
     st.divider()
 
     st.markdown("**Subjects**")
-    new_sub = st.text_input("New subject", placeholder="Economics, History, CS...")
-    if st.button("➕ Add subject", disabled=not new_sub.strip()):
-        name = new_sub.strip()
-        if name not in st.session_state.subjects:
-            st.session_state.subjects[name] = {"files": [], "urls": []}
-        st.session_state.active_subject = name
-        st.rerun()
+    with st.form("add_subject_form", clear_on_submit=True):
+        new_sub = st.text_input("New subject", placeholder="Economics, History, CS...")
+        if st.form_submit_button("➕ Add subject", use_container_width=True) and new_sub.strip():
+            name = new_sub.strip()
+            if name not in st.session_state.subjects:
+                st.session_state.subjects[name] = {"files": [], "urls": []}
+            st.session_state.active_subject = name
+            st.rerun()
 
     st.divider()
     for sub in list(st.session_state.subjects.keys()):
