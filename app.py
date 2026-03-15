@@ -104,22 +104,22 @@ init_session()
 
 _ls = LocalStorage()
 
-# Restore state from localStorage on page load
-if not st.session_state.get("_storage_loaded"):
-    _saved_key = _ls.getItem("study_agent_api_key")
+# Always call getItem (consistent component count across all renders)
+_saved_key = _ls.getItem("study_agent_api_key")
+_saved_subjects = _ls.getItem("study_agent_subjects")
+_saved_active = _ls.getItem("study_agent_active")
+
+# Apply saved state once per session (only when localStorage has responded with data)
+if not st.session_state.get("_storage_loaded") and _saved_subjects is not None:
     if _saved_key and not st.session_state.api_key:
         st.session_state.api_key = _saved_key
-
-    _saved = _ls.getItem("study_agent_subjects")
-    if _saved and isinstance(_saved, dict):
-        for name, data in _saved.items():
+    if isinstance(_saved_subjects, dict):
+        for name, data in _saved_subjects.items():
             if name not in st.session_state.subjects:
                 st.session_state.subjects[name] = {"files": [], "urls": data.get("urls", [])}
-        _saved_active = _ls.getItem("study_agent_active")
-        if _saved_active and _saved_active in st.session_state.subjects:
-            st.session_state.active_subject = _saved_active
-        st.session_state._storage_loaded = True
-        st.rerun()
+    if _saved_active and _saved_active in st.session_state.subjects:
+        st.session_state.active_subject = _saved_active
+    st.session_state._storage_loaded = True
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -535,9 +535,8 @@ with qa_tab:
             if speak_aloud:
                 speak(response_text)
 
-# ── Persist state to localStorage ─────────────────────────────────────────────
-if st.session_state.api_key:
-    _ls.setItem("study_agent_api_key", st.session_state.api_key)
+# ── Persist state to localStorage (always 3 calls = consistent component count)
+_ls.setItem("study_agent_api_key", st.session_state.api_key or "")
 _ls.setItem("study_agent_subjects", {
     name: {"urls": data["urls"]}
     for name, data in st.session_state.subjects.items()
