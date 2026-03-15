@@ -240,7 +240,6 @@ with st.sidebar:
         n_urls = len(st.session_state.subjects[sub]["urls"])
         badge = f" · {n_files}📄 {n_urls}🔗" if (n_files or n_urls) else ""
         is_active = sub == st.session_state.active_subject
-        is_builtin = sub == PRICING_SUBJECT
 
         if st.session_state.renaming_subject == sub:
             with st.form(f"rename_form_{sub}", clear_on_submit=True):
@@ -261,11 +260,6 @@ with st.sidebar:
                 if cancel:
                     st.session_state.renaming_subject = None
                     st.rerun()
-        elif is_builtin:
-            if st.button(f"{sub}{badge}", key=f"sub_btn_{sub}",
-                         type="primary" if is_active else "secondary", use_container_width=True):
-                st.session_state.active_subject = sub
-                st.rerun()
         else:
             col_btn, col_edit, col_del = st.columns([5, 1, 1])
             with col_btn:
@@ -281,7 +275,8 @@ with st.sidebar:
                 if st.button("🗑", key=f"del_btn_{sub}", help="Delete"):
                     del st.session_state.subjects[sub]
                     if st.session_state.active_subject == sub:
-                        st.session_state.active_subject = PRICING_SUBJECT
+                        remaining = list(st.session_state.subjects.keys())
+                        st.session_state.active_subject = remaining[0] if remaining else None
                     st.rerun()
 
 
