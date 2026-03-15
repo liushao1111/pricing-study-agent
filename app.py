@@ -336,7 +336,7 @@ with st.expander("📁 Add Materials", expanded=not has_materials):
 if has_materials:
     with st.expander(
         f"📚 Materials — {len(subject_data['files'])} file(s), {len(subject_data['urls'])} URL(s)",
-        expanded=False,
+        expanded=True,
     ):
         for i, f in enumerate(list(subject_data["files"])):
             c1, c2 = st.columns([8, 1])
@@ -354,6 +354,8 @@ if has_materials:
 if not has_materials:
     st.info("Add files or URLs above, then choose a mode below.")
     st.stop()
+
+st.success("Materials ready — pick a tab below to generate a summary, podcast, or start a Q&A session.")
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 
