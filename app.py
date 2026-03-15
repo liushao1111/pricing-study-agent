@@ -104,8 +104,12 @@ init_session()
 
 _ls = LocalStorage()
 
-# Restore subjects (names + URLs) from localStorage on page load
+# Restore state from localStorage on page load
 if not st.session_state.get("_storage_loaded"):
+    _saved_key = _ls.getItem("study_agent_api_key")
+    if _saved_key and not st.session_state.api_key:
+        st.session_state.api_key = _saved_key
+
     _saved = _ls.getItem("study_agent_subjects")
     if _saved and isinstance(_saved, dict):
         for name, data in _saved.items():
@@ -531,7 +535,9 @@ with qa_tab:
             if speak_aloud:
                 speak(response_text)
 
-# ── Persist subject names + URLs to localStorage ──────────────────────────────
+# ── Persist state to localStorage ─────────────────────────────────────────────
+if st.session_state.api_key:
+    _ls.setItem("study_agent_api_key", st.session_state.api_key)
 _ls.setItem("study_agent_subjects", {
     name: {"urls": data["urls"]}
     for name, data in st.session_state.subjects.items()
