@@ -93,6 +93,7 @@ def init_session():
         "api_key": os.environ.get("GEMINI_API_KEY", ""),
         "subjects": {PRICING_SUBJECT: {"files": [], "urls": []}},
         "active_subject": PRICING_SUBJECT,
+        "renaming_subject": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -239,14 +240,49 @@ with st.sidebar:
         n_urls = len(st.session_state.subjects[sub]["urls"])
         badge = f" · {n_files}📄 {n_urls}🔗" if (n_files or n_urls) else ""
         is_active = sub == st.session_state.active_subject
-        if st.button(
-            f"{sub}{badge}",
-            key=f"sub_btn_{sub}",
-            type="primary" if is_active else "secondary",
-            use_container_width=True,
-        ):
-            st.session_state.active_subject = sub
-            st.rerun()
+        is_builtin = sub == PRICING_SUBJECT
+
+        if st.session_state.renaming_subject == sub:
+            with st.form(f"rename_form_{sub}", clear_on_submit=True):
+                new_name = st.text_input("Rename", value=sub)
+                c1, c2 = st.columns(2)
+                with c1:
+                    save = st.form_submit_button("Save", use_container_width=True)
+                with c2:
+                    cancel = st.form_submit_button("Cancel", use_container_width=True)
+                if save:
+                    new_name = new_name.strip()
+                    if new_name and new_name != sub and new_name not in st.session_state.subjects:
+                        st.session_state.subjects[new_name] = st.session_state.subjects.pop(sub)
+                        if st.session_state.active_subject == sub:
+                            st.session_state.active_subject = new_name
+                    st.session_state.renaming_subject = None
+                    st.rerun()
+                if cancel:
+                    st.session_state.renaming_subject = None
+                    st.rerun()
+        elif is_builtin:
+            if st.button(f"{sub}{badge}", key=f"sub_btn_{sub}",
+                         type="primary" if is_active else "secondary", use_container_width=True):
+                st.session_state.active_subject = sub
+                st.rerun()
+        else:
+            col_btn, col_edit, col_del = st.columns([5, 1, 1])
+            with col_btn:
+                if st.button(f"{sub}{badge}", key=f"sub_btn_{sub}",
+                             type="primary" if is_active else "secondary", use_container_width=True):
+                    st.session_state.active_subject = sub
+                    st.rerun()
+            with col_edit:
+                if st.button("✏️", key=f"edit_btn_{sub}", help="Rename"):
+                    st.session_state.renaming_subject = sub
+                    st.rerun()
+            with col_del:
+                if st.button("🗑", key=f"del_btn_{sub}", help="Delete"):
+                    del st.session_state.subjects[sub]
+                    if st.session_state.active_subject == sub:
+                        st.session_state.active_subject = PRICING_SUBJECT
+                    st.rerun()
 
 
 # ── Main Area ─────────────────────────────────────────────────────────────────
