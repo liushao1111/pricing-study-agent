@@ -12,7 +12,6 @@ import streamlit as st
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
-from streamlit_local_storage import LocalStorage
 
 st.set_page_config(page_title="Study Agent", page_icon="📚", layout="wide")
 
@@ -87,39 +86,36 @@ You have access to their case studies and slides.
 - Flag what's likely to appear on an exam vs. what's deeper context"""
 
 
+# ── Persistent Store (survives browser refresh via server-side cache) ──────────
+
+@st.cache_resource
+def _get_store():
+    return {
+        "subjects": {PRICING_SUBJECT: {"files": [], "urls": []}},
+        "active_subject": PRICING_SUBJECT,
+        "api_key": os.environ.get("GEMINI_API_KEY", ""),
+    }
+
+_store = _get_store()
+
+
 # ── Session State ─────────────────────────────────────────────────────────────
 
 def init_session():
-    defaults = {
-        "api_key": os.environ.get("GEMINI_API_KEY", ""),
-        "subjects": {PRICING_SUBJECT: {"files": [], "urls": []}},
-        "active_subject": PRICING_SUBJECT,
-        "renaming_subject": None,
-    }
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
+    # subjects shares the same dict object as _store — mutations auto-persist
+    if "subjects" not in st.session_state:
+        st.session_state.subjects = _store["subjects"]
+    if "active_subject" not in st.session_state:
+        saved = _store.get("active_subject", PRICING_SUBJECT)
+        st.session_state.active_subject = saved if saved in st.session_state.subjects else next(
+            iter(st.session_state.subjects), PRICING_SUBJECT
+        )
+    if "api_key" not in st.session_state:
+        st.session_state.api_key = _store.get("api_key", "") or os.environ.get("GEMINI_API_KEY", "")
+    if "renaming_subject" not in st.session_state:
+        st.session_state.renaming_subject = None
 
 init_session()
-
-_ls = LocalStorage()
-
-# Always call getItem (consistent component count across all renders)
-_saved_key = _ls.getItem("study_agent_api_key")
-_saved_subjects = _ls.getItem("study_agent_subjects")
-_saved_active = _ls.getItem("study_agent_active")
-
-# Apply saved state once per session (only when localStorage has responded with data)
-if not st.session_state.get("_storage_loaded") and _saved_subjects is not None:
-    if _saved_key and not st.session_state.api_key:
-        st.session_state.api_key = _saved_key
-    if isinstance(_saved_subjects, dict):
-        for name, data in _saved_subjects.items():
-            if name not in st.session_state.subjects:
-                st.session_state.subjects[name] = {"files": [], "urls": data.get("urls", [])}
-    if _saved_active and _saved_active in st.session_state.subjects:
-        st.session_state.active_subject = _saved_active
-    st.session_state._storage_loaded = True
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -535,10 +531,8 @@ with qa_tab:
             if speak_aloud:
                 speak(response_text)
 
-# ── Persist state to localStorage (always 3 calls = consistent component count)
-_ls.setItem("study_agent_api_key", st.session_state.api_key or "")
-_ls.setItem("study_agent_subjects", {
-    name: {"urls": data["urls"]}
-    for name, data in st.session_state.subjects.items()
-})
-_ls.setItem("study_agent_active", st.session_state.active_subject or "")
+# ── Sync mutable values back to persistent store ──────────────────────────────
+# (subjects dict is shared by reference, only scalar values need explicit sync)
+_store["active_subject"] = st.session_state.active_subject
+if st.session_state.api_key:
+    _store["api_key"] = st.session_state.api_key
